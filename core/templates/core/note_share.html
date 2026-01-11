@@ -1,0 +1,196 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Share Note - NoteSpace{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-lg mb-4 interactive-hover" style="animation: fadeInUp 0.5s ease;">
+            <div class="card-header bg-white">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-share me-2 text-primary"></i>Share "{{ note.title }}"
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Username</label>
+                        <div class="position-relative">
+                            {{ form.username }}
+                            <div id="user-search-results" class="dropdown-menu w-100 show" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+                        {% if form.username.errors %}
+                        <div class="text-danger small">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Access Level</label>
+                        {{ form.role }}
+                        <div class="form-text mt-2">
+                            <div class="d-flex gap-3">
+                                <span>
+                                    <i class="bi bi-eye text-primary me-1"></i>
+                                    <strong>Viewer:</strong> Can only view the note
+                                </span>
+                                <span>
+                                    <i class="bi bi-pencil text-success me-1"></i>
+                                    <strong>Editor:</strong> Can view and edit the note
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-person-plus me-1"></i>Share
+                        </button>
+                        <a href="{% url 'note_detail' note.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Collaborators -->
+        <div class="card border-0 shadow-sm interactive-hover">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-people me-2 text-primary"></i>Current Collaborators
+                    <span class="badge bg-primary ms-2">{{ collaborators.count }}</span>
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                {% if collaborators %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Added</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for access in collaborators %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="collaborator-avatar" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                            {{ access.user.username|slice:":1"|upper }}
+                                        </div>
+                                        <span class="fw-medium">{{ access.user.username }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if access.role == 'editor' %}success{% else %}secondary{% endif %}">
+                                        {{ access.role }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ access.created_at|timesince }} ago</small>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'note_unshare' note.pk access.user.pk %}" class="btn btn-sm btn-outline-danger" title="Remove">
+                                        <i class="bi bi-person-x"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people text-muted display-6 mb-2 d-block"></i>
+                    <p class="text-muted mb-0">No collaborators yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('id_username_search');
+    const resultsContainer = document.getElementById('user-search-results');
+    let searchTimeout = null;
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Hide results if query is too short
+            if (query.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Debounce the search
+            searchTimeout = setTimeout(function() {
+                fetch(`/api/users/search/?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsContainer.innerHTML = '';
+                        
+                        if (data.users.length > 0) {
+                            data.users.forEach(user => {
+                                const item = document.createElement('button');
+                                item.className = 'dropdown-item text-start d-flex align-items-center gap-2';
+                                item.type = 'button';
+                                item.innerHTML = `
+                                    <div class="collaborator-avatar" style="width: 24px; height: 24px; font-size: 0.7rem; flex-shrink: 0;">
+                                        ${user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <strong>${user.username}</strong>
+                                        <small class="text-muted d-block">${user.email}</small>
+                                    </div>
+                                `;
+                                item.addEventListener('click', function() {
+                                    searchInput.value = user.username;
+                                    resultsContainer.style.display = 'none';
+                                });
+                                resultsContainer.appendChild(item);
+                            });
+                            resultsContainer.style.display = 'block';
+                        } else {
+                            resultsContainer.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error searching users:', error);
+                        resultsContainer.style.display = 'none';
+                    });
+            }, 300);
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+                resultsContainer.style.display = 'none';
+            }
+        });
+        
+        // Handle keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                resultsContainer.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

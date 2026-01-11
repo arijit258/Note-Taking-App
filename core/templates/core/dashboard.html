@@ -1,0 +1,136 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard - NoteSpace{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">
+        <i class="bi bi-house-door me-2 text-primary"></i>Dashboard
+    </h2>
+</div>
+
+<div class="row">
+    <!-- My Notes -->
+    <div class="col-lg-8">
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-journal-text me-2 text-primary"></i>My Notes
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if my_notes %}
+                <div class="row g-4">
+                    {% for note in my_notes %}
+                    <div class="col-md-6">
+                        <div class="note-card h-100" style="--card-index: {{ forloop.counter0 }}">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0">
+                                        <a href="{% url 'note_detail' note.pk %}" class="text-decoration-none">
+                                            <i class="bi bi-file-text me-2 text-primary"></i>{{ note.title }}
+                                        </a>
+                                    </h5>
+                                    <div class="dropdown">
+                                        <button class="btn btn-link text-muted p-1" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="{% url 'note_edit' note.pk %}">
+                                                <i class="bi bi-pencil me-2"></i>Edit
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="{% url 'note_share' note.pk %}">
+                                                <i class="bi bi-share me-2"></i>Share
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="{% url 'note_delete' note.pk %}">
+                                                <i class="bi bi-trash me-2"></i>Delete
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="content-preview flex-grow-1">{{ note.content|truncatewords:30 }}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>{{ note.updated_at|timesince }} ago
+                                    </small>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'note_edit' note.pk %}" class="btn btn-outline-primary quick-action-btn" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'note_share' note.pk %}" class="btn btn-outline-secondary quick-action-btn" title="Share">
+                                            <i class="bi bi-share"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
+                    <h5 class="text-muted mb-3">No notes yet</h5>
+                    <p class="text-muted mb-4">Create your first note to get started</p>
+                    <a href="{% url 'note_create' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-lg me-2"></i>Create Your First Note
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared with me -->
+    <div class="col-lg-4">
+        <div class="sidebar">
+            <h6>
+                <i class="bi bi-people me-2"></i>Shared with Me
+            </h6>
+            {% if shared_notes %}
+            <div class="list-group list-group-flush">
+                {% for note in shared_notes %}
+                <a href="{% url 'note_detail' note.pk %}" class="shared-note-item list-group-item">
+                    <div class="d-flex align-items-center w-100">
+                        <div class="collaborator-avatar me-3">
+                            {{ note.owner.username|slice:":1"|upper }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-medium">{{ note.title }}</div>
+                            <small class="text-muted">by {{ note.owner.username }}</small>
+                        </div>
+                        <i class="bi bi-chevron-right ms-2 text-muted"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-inbox display-6 text-muted mb-3 d-block"></i>
+                <p class="text-muted mb-0 small">No shared notes yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="sidebar mt-4">
+            <h6>
+                <i class="bi bi-bar-chart me-2"></i>Quick Stats
+            </h6>
+            <div class="row text-center">
+                <div class="col-6">
+                    <div class="h3 fw-bold text-primary mb-0">{{ my_notes.count }}</div>
+                    <small class="text-muted">My Notes</small>
+                </div>
+                <div class="col-6">
+                    <div class="h3 fw-bold text-success mb-0">{{ shared_notes.count }}</div>
+                    <small class="text-muted">Shared</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
